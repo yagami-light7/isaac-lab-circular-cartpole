@@ -1,0 +1,208 @@
+﻿{
+  "meta": {
+    "snapshot_name": "conversation_context_snapshot",
+    "generated_date": "2026-03-31",
+    "generated_by": "Codex",
+    "workspace_root": "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole",
+    "note": "这是基于当前对话整理的压缩上下文，用于后续续接工作，不等价于最终设计文档。"
+  },
+  "project_overview": {
+    "goal": "以尽可能快的时间完成二阶倒立摆 sim2real 复现，并在实机上部署强化学习控制。",
+    "hardware_stack": [
+      "PC 上位机",
+      "达妙 MC02 控制板",
+      "DM4310 电机",
+      "MT6701 磁编码器",
+      "额外 C 板（STM32 F4）作为 MT6701 I2C 采集与串口桥接板"
+    ],
+    "system_architecture": {
+      "ubuntu_role": "Isaac Lab 仿真、训练、导出 policy.onnx / policy.pt",
+      "windows_role": "当前开发、调试、上位机联调、GUI 可视化",
+      "pc_runtime_role": "接收 MC02 状态、维护 history、运行策略、下发控制命令",
+      "mc02_role": "USB CDC 与 PC 通信，FDCAN 控制 DM4310，串口接收 C 板 MT6701 数据，统一转发状态",
+      "c_board_role": "使用 I2C2 读取 MT6701，再通过 UART1 向 MC02 的 USART10 发送角度与角速度"
+    }
+  },
+  "workspace_layout": {
+    "root": "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole",
+    "key_paths": {
+      "isaac_lab_repo": "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\isaac-lab",
+      "mc02_firmware": "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\mc02_code",
+      "mt6701_bridge_firmware": "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\MT6701_CBoard_UART_Bridge",
+      "docs": "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\docs"
+    }
+  },
+  "confirmed_conventions": {
+    "control_frequency_hz": 250,
+    "base_pole": {
+      "zero_definition": "固定杆竖直向下为 0 rad",
+      "positive_direction": "逆时针为正",
+      "motor_position_limit_rad": [-3.2, 3.2]
+    },
+    "flex_pole": {
+      "zero_definition": "活动杆与固定杆重合为 0 rad",
+      "positive_direction": "逆时针为正",
+      "raw_encoder_behavior": "单圈角会在 ±pi 附近跳变",
+      "current_plan_for_policy": "在 PC 侧做 unwrap 后再送入策略网络",
+      "mechanical_zero_offset_rad": 2.4785
+    },
+    "policy_action_semantics": {
+      "current_definition": "单维位置增量动作",
+      "not_current_definition": "不是 MIT 五参数直接由策略输出",
+      "board_side_execution": "MC02 使用本地固定 Kp/Kd，把位置增量转成 MIT 位置闭环命令"
+    }
+  },
+  "sim2real_contract": {
+    "single_frame_policy_features": [
+      "base_pos",
+      "flex_pos",
+      "base_vel",
+      "flex_vel",
+      "last_action"
+    ],
+    "history_length": 3,
+    "policy_input_dimension": 15,
+    "last_action_meaning": "上一控制周期发给执行器的动作值，由 PC 侧维护，不由下位机回传",
+    "important_note": "MC02 上报给 PC 的 0x0100 五个 float 不是策略输入本体，PC 需要做字段重排并插入 last_action 后再拼出 15 维观测。"
+  },
+  "isaac_lab_status": {
+    "task_file": "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\isaac-lab\\isaac-lab-circular-cartpole-sim2real\\source\\circular_cartpole_sim2real\\circular_cartpole_sim2real\\tasks\\manager_based\\circular_cartpole_sim2real\\s2r_task_l1_v1.py",
+    "current_sim_observation_order": [
+      "base_pos",
+      "flex_pos",
+      "base_vel",
+      "flex_vel",
+      "last_action"
+    ],
+    "current_sim_action_type": "JointPositionActionCfg on base_to_fixed",
+    "current_sim_action_shape": 1,
+    "status": "观测顺序与 15 维 history 主线已经确认，但 wrap/unwrap 语义还需要回 Ubuntu 实际核对。"
+  },
+  "pc_mc02_protocols": {
+    "mc02_to_pc": {
+      "command_id": "0x0100",
+      "description": "当前板端统一上报的简化倒立摆状态帧",
+      "payload_fields": [
+        "base_pos_rad",
+        "base_vel_rad_s",
+        "motor_torque_nm",
+        "flex_pos_rad",
+        "flex_vel_rad_s"
+      ],
+      "transport_format": "A5 + data_length + seq + CRC8 + cmd_id + payload + CRC16"
+    },
+    "pc_to_mc02": {
+      "motor_enable": {
+        "command_id": "0x0301",
+        "description": "电机使能/失能"
+      },
+      "mit_debug": {
+        "command_id": "0x0310",
+        "compatibility_note": "历史调试链路里也兼容过 0x0101 快速 MIT 命令",
+        "description": "直接下发 MIT 调试命令，用于手动联调"
+      },
+      "policy_position_delta": {
+        "command_id": "0x0311",
+        "description": "当前策略主线使用的位置增量命令",
+        "current_payload_fields": [
+          "motor_id",
+          "pos_delta_rad"
+        ],
+        "board_execution_logic": [
+          "读取当前电机反馈位置",
+          "target_pos = current_pos + pos_delta_rad",
+          "对 target_pos 做 ±3.2 rad 限幅",
+          "用 MC02 本地固定 Kp/Kd 转成 MIT 命令下发"
+        ]
+      }
+    },
+    "c_board_to_mc02": {
+      "physical_link": "UART1(C板) -> USART10(MC02)",
+      "command_id": "0x0202",
+      "payload_fields": [
+        "angle_rad",
+        "speed_rad_s"
+      ],
+      "transport_format": "同样使用 A5 + CRC8/CRC16 包格式"
+    }
+  },
+  "pc_runtime_status": {
+    "host_runtime_root": "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\isaac-lab\\isaac-lab-circular-cartpole-sim2real\\host_runtime",
+    "implemented": [
+      "15 维观测 history 拼接逻辑已存在",
+      "MC02 A5 协议串口收发已实现",
+      "0x0100 简化状态帧可桥接成 SensorFrameV1",
+      "策略输出单维动作后会映射成 0x0311 位置增量命令",
+      "单进程 GUI 已用于联调和可视化"
+    ],
+    "not_done_yet": [
+      "flex 角度的 unwrap 还没有正式接入 host_runtime 主路径",
+      "最终 policy.onnx 尚未导出或接入真实部署闭环"
+    ],
+    "current_interpretation_of_15d_input": "PC 侧负责从单帧 5 维特征拼出 3 帧 history，最终把 15 维向量送入策略。"
+  },
+  "mc02_firmware_status": {
+    "main_files": [
+      "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\mc02_code\\Users\\0-APL\\APL_Commu_Hub\\APL_Commu_Hub.h",
+      "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\mc02_code\\Users\\0-APL\\APL_Commu_Hub\\APL_Commu_Hub.cpp",
+      "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\mc02_code\\Users\\0-APL\\APL_USART\\APL_UASRT.cpp",
+      "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\mc02_code\\Users\\2-HDL\\HDL_USB_CDC_PC\\HDL_USB_CDC_PC_Message.h"
+    ],
+    "implemented": [
+      "DM4310 MIT 模式驱动稳定可用",
+      "FDCAN 回传稳定",
+      "USART10 已接入 C 板 MT6701 串口数据",
+      "Commu 线程会解析 MT6701 串口队列并统一转发给 PC",
+      "0x0311 已补齐并收成纯位置增量命令"
+    ],
+    "mt6701_processing_on_mc02": {
+      "done": [
+        "对 C 板回传角度减去机械零点 2.4785 rad",
+        "对角速度做 3 点中值 + EMA 滤波",
+        "当前会把 MT6701 状态合并进 0x0100 上报"
+      ],
+      "needs_recheck": "由于你后续决定在 PC 侧做 unwrap，MC02 侧当前对 flex 角度的 wrap 处理与最终策略语义是否一致还需要再核。"
+    }
+  },
+  "c_board_firmware_status": {
+    "project_path": "E:\\RoboMaster\\RL\\isaac-lab-circular-cartpole\\MT6701_CBoard_UART_Bridge",
+    "implemented": [
+      "使用 I2C2(PF0/PF1) 读取 MT6701",
+      "UART1 输出 A5 格式数据包",
+      "只保留最小必要线程与驱动",
+      "工程名已经统一为 MT6701_CBoard_UART_Bridge"
+    ],
+    "current_payload": [
+      "angle_rad",
+      "speed_rad_s"
+    ]
+  },
+  "verification_history": {
+    "passed": [
+      "PC <-> MC02 USB CDC 双向通信已跑通",
+      "GUI 中使能和 MIT 调试已能驱动电机响应",
+      "MC02 -> PC 0x0100 状态回传已验证",
+      "PC 协议测试在 0x0311 去冗余后通过 9 项",
+      "MC02 固件在最近一次 0x0311 去冗余后重新编译通过"
+    ],
+    "environment_notes": [
+      "Windows 上同一个 COM 口不能被两个独立进程同时打开",
+      "因此监控与控制最好放在同一个 GUI 或同一个进程里完成",
+      "conda base 曾出现 anaconda-cloud-auth 与 conda 插件不兼容警告，但项目独立环境可继续使用"
+    ]
+  },
+  "known_pending_items": [
+    "去 Ubuntu 用 Isaac Lab 实际检查观测顺序、零点、方向、频率和 wrap/unwrap 语义是否完全统一",
+    "决定 flex_pos 在训练和部署中最终使用 wrap 还是 unwrap 版本",
+    "如果最终采用 unwrap，需要把 PC 侧 host_runtime 主路径接入 unwrap",
+    "训练并导出最终 policy.onnx",
+    "在实机上进行 tethered L1 闭环，再进行自由运行"
+  ],
+  "recommended_next_steps": [
+    "先在 Ubuntu 的 Isaac Lab 中打印和核对单帧观测顺序与数值语义",
+    "确认 flex 角是否应该以 unwrap 后的连续量进入策略",
+    "若结论为 unwrap，则回到 PC 侧补 unwrap 逻辑",
+    "使用统一后的观测契约重新训练并导出 onnx",
+    "再在 Windows 上用现有 host_runtime 与 MC02 进行策略部署"
+  ]
+}
