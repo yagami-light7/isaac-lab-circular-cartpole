@@ -1,0 +1,46 @@
+﻿
+GraphedExpression="((mec_arm_control).joint_motor[1]).angle", Color=#a00909
+GraphedExpression="joint1_angle_cmd", Color=#09a01b
+GraphedExpression="joint2_angle_cmd", Color=#09a087
+GraphedExpression="joint3_angle_cmd", DisplayFormat=DISPLAY_FORMAT_HEX, Color=#0984a0
+GraphedExpression="joint4_angle_cmd", Color=#0964a0
+GraphedExpression="joint5_angle_cmd", Color=#094fa0
+GraphedExpression="((mec_arm_control).joint_motor[3]).angle_set", Color=#0940a0
+GraphedExpression="((mec_arm_control).joint_motor[3]).angle", Color=#0934a0
+OpenDocument="main.c", FilePath="E:/RoboMaster/RM_Project/MT6701_CBoard_UART_Bridge/Core/Src/main.c", Line=64
+OpenDocument="Dev_CAN_Receive.c", FilePath="E:/RoboMaster/RM_Project/MT6701_CBoard_UART_Bridge/Users/Bsp/Bsp_Device/Dev_CAN/Dev_CAN_Receive.c", Line=58
+OpenDocument="App_Send_Data_Task.c", FilePath="E:/RoboMaster/RM_Project/MT6701_CBoard_UART_Bridge/Users/Application/App_Send_Data/App_Send_Data_Task.c", Line=12
+OpenDocument="App_ADC_CUSTOM.c", FilePath="E:/RoboMaster/RM_Project/MT6701_CBoard_UART_Bridge/Users/Application/App_ADC_CUSTOM/App_ADC_CUSTOM.c", Line=0
+OpenDocument="App_Mechanical_Arm_Task.c", FilePath="E:/RoboMaster/RM_Project/MT6701_CBoard_UART_Bridge/Users/Application/App_Mec_Arm/App_Mechanical_Arm_Task.c", Line=224
+OpenDocument="Dev_Remote_Control.c", FilePath="E:/RoboMaster/RM_Project/MT6701_CBoard_UART_Bridge/Users/Bsp/Bsp_Device/Dev_Remote_Control/Dev_Remote_Control.c", Line=129
+OpenDocument="App_Mechanical_Arm_Behaviour.c", FilePath="E:/RoboMaster/RM_Project/MT6701_CBoard_UART_Bridge/Users/Application/App_Mec_Arm/App_Mechanical_Arm_Behaviour.c", Line=37
+OpenDocument="stm32f4xx_hal_rcc.c", FilePath="E:/RoboMaster/RM_Project/MT6701_CBoard_UART_Bridge/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c", Line=688
+OpenToolbar="Debug", Floating=0, x=0, y=0
+OpenWindow="Source Files", DockArea=LEFT, x=0, y=0, w=822, h=228, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=1, w=777, h=288, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Break & Tracepoints", DockArea=LEFT, x=0, y=2, w=822, h=469, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, VectorCatchIndexMask=254
+OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=1, w=822, h=417, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Data Sampling", DockArea=RIGHT, x=0, y=0, w=777, h=827, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, VisibleTab=0, UniformSampleSpacing=0
+OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=2560, h=145, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+TableHeader="Vector Catches", SortCol="None", SortOrder="ASCENDING", VisibleCols=["";"Vector Catch";"Description"], ColWidths=[50;300;500]
+TableHeader="Break & Tracepoints", SortCol="None", SortOrder="ASCENDING", VisibleCols=["";"Type";"Location";"Extras"], ColWidths=[100;100;100;522]
+TableHeader="Source Files", SortCol="File", SortOrder="ASCENDING", VisibleCols=["File";"Status";"Size";"#Insts";"Path"], ColWidths=[271;100;100;100;1030]
+TableHeader="Data Sampling Table", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";" ((mec_arm_control).joint_motor[1]).angle";" joint1_angle_cmd";" joint2_angle_cmd";" joint3_angle_cmd";" joint4_angle_cmd";" joint5_angle_cmd";" ((mec_arm_control).joint_motor[3]).angle_set";" ((mec_arm_control).joint_motor[3]).angle"], ColWidths=[100;100;100;100;100;100;100;100;100;100]
+TableHeader="Data Sampling Setup", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Type";"Value";"Min";"Max";"Average";"# Changes";"Min. Change";"Max. Change"], ColWidths=[411;100;100;100;100;100;110;126;126]
+TableHeader="Power Sampling", SortCol="Index", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
+TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh"], ColWidths=[282;226;100;188]
+TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
+TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[26;26;26;26]
+WatchedExpression="tx_data", DisplayFormat=DISPLAY_FORMAT_HEX, Window=Watched Data 1
+WatchedExpression="joint0_angle_cmd", DisplayFormat=DISPLAY_FORMAT_HEX, Window=Watched Data 1
+WatchedExpression="joint_motor", Window=Watched Data 1
+WatchedExpression="mec_arm_control", Window=Watched Data 1
+WatchedExpression="joint0_angle_cmd", RefreshRate=5, Window=Watched Data 1
+WatchedExpression="joint1_angle_cmd", Window=Watched Data 1
+WatchedExpression="joint2_angle_cmd", Window=Watched Data 1
+WatchedExpression="joint3_angle_cmd", Window=Watched Data 1
+WatchedExpression="pitch_adc_voltage", Window=Watched Data 1
+WatchedExpression="yaw_adc_voltage", Window=Watched Data 1
+WatchedExpression="joint4_angle_cmd", Window=Watched Data 1
+WatchedExpression="joint5_angle_cmd", Window=Watched Data 1
+WatchedExpression="custom_adc_control", Window=Watched Data 1

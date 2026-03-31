@@ -1,0 +1,12 @@
+name: circular-cartpole-host-runtime
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pytest
+  - pip:
+      - onnxruntime
+      - pyserial

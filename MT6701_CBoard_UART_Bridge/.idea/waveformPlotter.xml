@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WaveformPlotterConfig">
+    <option name="trackedVariables">
+      <list>
+        <option value="angle.angle_rad" />
+      </list>
+    </option>
+    <option name="variableNames">
+      <list>
+        <option value="angle.angle_rad" />
+      </list>
+    </option>
+  </component>
+</project>

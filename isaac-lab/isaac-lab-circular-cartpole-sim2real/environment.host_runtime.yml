@@ -1,0 +1,11 @@
+name: cartpole-s2r-host
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy>=1.26,<3
+  - pytest>=7.4,<9
+  - pip:
+      - onnxruntime>=1.18,<2
+      - pyserial>=3.5,<4

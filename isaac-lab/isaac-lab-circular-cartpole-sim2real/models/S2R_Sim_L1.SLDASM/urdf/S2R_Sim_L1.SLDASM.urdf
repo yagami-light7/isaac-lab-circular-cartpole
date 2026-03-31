@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="S2R_Sim_L1.SLDASM">
+  <link
+    name="base">
+    <inertial>
+      <origin
+        xyz="-7.39571337827187E-18 0.0450583042305824 0.000489755536891761"
+        rpy="0 0 0" />
+      <mass
+        value="0.728494866535307" />
+      <inertia
+        ixx="0.000886467061598883"
+        ixy="1.84391129878781E-20"
+        ixz="2.41616758039883E-21"
+        iyy="0.00100025716636879"
+        iyz="-1.76311993281026E-06"
+        izz="0.00108908116011903" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://S2R_Sim_L1.SLDASM/meshes/base.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://S2R_Sim_L1.SLDASM/meshes/base.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="fixed_pole">
+    <inertial>
+      <origin
+        xyz="5.16316347733174E-19 0.09 0.01"
+        rpy="0 0 0" />
+      <mass
+        value="0.229674332676534" />
+      <inertia
+        ixx="0.000948680867991478"
+        ixy="2.23899042390887E-20"
+        ixz="1.12666892597887E-21"
+        iyy="5.70163733115521E-05"
+        iyz="7.09831256318838E-22"
+        izz="0.000990385619124594" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://S2R_Sim_L1.SLDASM/meshes/fixed_pole.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://S2R_Sim_L1.SLDASM/meshes/fixed_pole.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="base_to_fixed"
+    type="continuous">
+    <origin
+      xyz="0 -0.044 0.05"
+      rpy="1.5707963267949 0 0" />
+    <parent
+      link="base" />
+    <child
+      link="fixed_pole" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="flex_pole_1">
+    <inertial>
+      <origin
+        xyz="-1.27561806603782E-17 -0.09 0.01"
+        rpy="0 0 0" />
+      <mass
+        value="0.229674332676534" />
+      <inertia
+        ixx="0.000948680867991477"
+        ixy="-8.26156192211469E-20"
+        ixz="1.12937726300576E-22"
+        iyy="5.7016373311552E-05"
+        iyz="4.46677530778638E-21"
+        izz="0.000990385619124593" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://S2R_Sim_L1.SLDASM/meshes/flex_pole_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.501960784313725 1 0.501960784313725 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://S2R_Sim_L1.SLDASM/meshes/flex_pole_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="fixed_to_flex_1"
+    type="continuous">
+    <origin
+      xyz="0 0.18 0.02"
+      rpy="0 0 -3.14159265358979" />
+    <parent
+      link="fixed_pole" />
+    <child
+      link="flex_pole_1" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+</robot>
