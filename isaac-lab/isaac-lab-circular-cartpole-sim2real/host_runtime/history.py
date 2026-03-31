@@ -4,17 +4,18 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Iterable, Sequence
 
+from .observation_contract import (
+    POLICY_FRAME_DIM,
+    POLICY_HISTORY_LENGTH,
+    POLICY_TERM_FIELD_NAMES,
+    build_policy_frame,
+    flatten_history_term_major,
+)
 from .protocol import ActionFrameV1, SensorFrameV1
 
 
-HISTORY_TERM_NAMES = (
-    "base_pos_rad",
-    "flex1_pos_rad",
-    "base_vel_rad_s",
-    "flex1_vel_rad_s",
-    "last_action_delta_rad",
-)
-DEFAULT_FEATURE_DIM = len(HISTORY_TERM_NAMES)
+HISTORY_TERM_NAMES = POLICY_TERM_FIELD_NAMES
+DEFAULT_FEATURE_DIM = POLICY_FRAME_DIM
 
 
 def build_history_frame(
@@ -32,13 +33,13 @@ def build_history_frame(
     else:
         last_action_delta = float(last_action.base_pos_delta_rad)
 
-    return [
-        float(sensor.base_pos_rad),
-        float(sensor.flex1_pos_rad),
-        float(sensor.base_vel_rad_s),
-        float(sensor.flex1_vel_rad_s),
-        last_action_delta,
-    ]
+    return build_policy_frame(
+        base_pos=float(sensor.base_pos_rad),
+        flex_pos=float(sensor.flex1_pos_rad),
+        base_vel=float(sensor.base_vel_rad_s),
+        flex_vel=float(sensor.flex1_vel_rad_s),
+        last_action=last_action_delta,
+    )
 
 
 default_observation_features = build_history_frame
@@ -47,7 +48,7 @@ default_observation_features = build_history_frame
 @dataclass(slots=True)
 class ObservationHistory:
     frame_dim: int = DEFAULT_FEATURE_DIM
-    history_length: int = 3
+    history_length: int = POLICY_HISTORY_LENGTH
     pad_value: float = 0.0
     _frames: deque[list[float]] = field(init=False, repr=False)
 
@@ -70,17 +71,12 @@ class ObservationHistory:
         self._frames.append(values)
 
     def flatten(self) -> list[float]:
-        missing = self.history_length - len(self._frames)
-        padded_frames = [
-            [self.pad_value] * self.frame_dim for _ in range(missing)
-        ] + list(self._frames)
-        output: list[float] = []
-        # Isaac Lab concatenates observation histories term-major:
-        # [base_pos_hist, flex1_pos_hist, base_vel_hist, flex1_vel_hist, last_action_hist]
-        for term_index in range(self.frame_dim):
-            for frame in padded_frames:
-                output.append(frame[term_index])
-        return output
+        return flatten_history_term_major(
+            list(self._frames),
+            history_length=self.history_length,
+            frame_dim=self.frame_dim,
+            pad_value=self.pad_value,
+        )
 
     @property
     def is_full(self) -> bool:

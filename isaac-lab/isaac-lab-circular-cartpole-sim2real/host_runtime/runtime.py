@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Sequence
 
 from .history import ObservationHistory, build_history_frame
+from .observation_contract import POLICY_FRAME_DIM, POLICY_HISTORY_LENGTH
 from .policy import PolicyBackend, load_policy
 from .protocol import ActionFrameV1, SensorFrameV1
 
@@ -12,8 +13,8 @@ from .protocol import ActionFrameV1, SensorFrameV1
 @dataclass(slots=True)
 class HostRuntimeConfig:
     policy_path: str | Path | None = None
-    history_length: int = 3
-    feature_dim: int = 5
+    history_length: int = POLICY_HISTORY_LENGTH
+    feature_dim: int = POLICY_FRAME_DIM
     kp: float = 1.0
     kd: float = 0.0
     watchdog_ms: int = 100

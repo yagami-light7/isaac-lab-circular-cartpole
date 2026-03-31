@@ -19,6 +19,11 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import UniformNoiseCfg
 
+from circular_cartpole_sim2real.observation_contract import (
+    CONTROL_FREQUENCY_HZ,
+    POLICY_HISTORY_LENGTH,
+)
+
 from . import mdp
 
 ##
@@ -85,9 +90,9 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        history_length = 3
+        history_length = POLICY_HISTORY_LENGTH
 
-        based_joint_pos = ObsTerm(
+        base_joint_pos = ObsTerm(
             func=mdp.joint_pos_rel,
             clip=(-2 * math.pi, 2 * math.pi),
             noise=UniformNoiseCfg(n_min=-0.02, n_max=0.02),
@@ -273,5 +278,5 @@ class CircularCartpoleSim2realEnvCfg(ManagerBasedRLEnvCfg):
         # viewer settings
         self.viewer.eye = (8.0, 0.0, 5.0)
         # simulation settings
-        self.sim.dt = 1 / 250
+        self.sim.dt = 1 / CONTROL_FREQUENCY_HZ
         self.sim.render_interval = self.decimation
