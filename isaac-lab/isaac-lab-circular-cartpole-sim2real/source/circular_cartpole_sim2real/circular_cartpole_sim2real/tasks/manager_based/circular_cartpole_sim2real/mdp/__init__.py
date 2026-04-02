@@ -12,3 +12,4 @@ from .rewards import *
 from .events import *
 from .obversations import *
 from .terminations import *
+from .curriculums import *

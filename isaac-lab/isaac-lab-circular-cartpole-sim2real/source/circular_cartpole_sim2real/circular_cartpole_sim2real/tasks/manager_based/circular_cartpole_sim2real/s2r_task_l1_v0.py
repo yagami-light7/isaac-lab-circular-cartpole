@@ -136,7 +136,7 @@ class EventCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed"]),
             "position_range": (-3.0, 3.0),
-            "velocity_range": (-10.0, 10.0),
+            "velocity_range": (-6.0, 6.0),
         },
     )
 
@@ -145,18 +145,18 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=["fixed_to_flex_1"]),
-            "position_range": (-6.0, 6.0),
-            "velocity_range": (-10.0, 10.0),
+            "position_range": (-3.0, 3.0),
+            "velocity_range": (-6.0, 6.0),
         },
     )
 
     # startup
     randomize_rigid_body_mass_fixed = EventTerm(
         func=mdp.randomize_rigid_body_mass,
-        mode="startup",
+        mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["fixed_pole"]),
-            "mass_distribution_params": (-0.14, -0.07),
+            "mass_distribution_params": (-0.12, -0.08),
             "operation": "add",
             "recompute_inertia": True,
         },
@@ -164,10 +164,10 @@ class EventCfg:
 
     randomize_rigid_body_mass_flex_1 = EventTerm(
         func=mdp.randomize_rigid_body_mass,
-        mode="startup",
+        mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["flex_pole_1"]),
-            "mass_distribution_params": (-0.14, -0.07),
+            "mass_distribution_params": (-0.12, -0.08),
             "operation": "add",
             "recompute_inertia": True,
         },
@@ -175,19 +175,19 @@ class EventCfg:
 
     randomize_fixed_com_positions = EventTerm(
         func=mdp.randomize_rigid_body_com,
-        mode="startup",
+        mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["fixed_pole"]),
-            "com_range": {"x": (0.0, 0.0), "y": (-0.02, 0.02), "z": (0.0, 0.0)},
+            "com_range": {"x": (0.0, 0.0), "y": (-0.01, 0.01), "z": (0.0, 0.0)},
         },
     )
 
     randomize_flex_1_com_positions = EventTerm(
         func=mdp.randomize_rigid_body_com,
-        mode="startup",
+        mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["flex_pole_1"]),
-            "com_range": {"x": (0.0, 0.0), "y": (-0.02, 0.02), "z": (0.0, 0.0)},
+            "com_range": {"x": (0.0, 0.0), "y": (-0.01, 0.01), "z": (0.0, 0.0)},
         },
     )
 
@@ -196,8 +196,8 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed"]),
-            "stiffness_distribution_params": (0.5, 2.0),
-            "damping_distribution_params": (0.5, 2.0),
+            "stiffness_distribution_params": (0.8, 1.4),
+            "damping_distribution_params": (0.8, 1.4),
             "operation": "scale",
             "distribution": "uniform",
         },
@@ -215,32 +215,175 @@ class TerminationsCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    fixed_joint_vel_l2 = RewTerm(
-        func=mdp.joint_vel_l2,
-        weight=-1e-4,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed"])},
+    fixed_alignment = RewTerm(
+        func=mdp.rk_joint_angle_alignment_reward,
+        weight=1.56,
+        params={
+            "target_angle": fixed_pole_target,
+            "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed", "fixed_to_flex_1"]),
+            "joint_index": 0,
+            "linear_weight": 5.0,
+            "exp_weight": 2.0,
+        },
     )
-    flex_1_joint_vel_l2 = RewTerm(
-        func=mdp.joint_vel_l2,
-        weight=-1e-4,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["fixed_to_flex_1"])},
+
+    flex_alignment = RewTerm(
+        func=mdp.rk_joint_angle_alignment_reward,
+        weight=2.46,
+        params={
+            "target_angle": flex_1_pole_target,
+            "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed", "fixed_to_flex_1"]),
+            "joint_index": 1,
+            "linear_weight": 5.0,
+            "exp_weight": 2.0,
+        },
     )
+
     pos_reward = RewTerm(
         func=mdp.rk_alignment_pos_reward,
-        weight=1.0,
+        weight=0.0,
         params={
             "flex_target": flex_1_pole_target,
             "fixed_target": fixed_pole_target,
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
             "fixed_pole_joint": "base_to_fixed",
             "flex_pole_joint": "fixed_to_flex_1",
-            "additive_weight": 4.0,
-            "multiplicative_weight": 6.0,
+            "additive_weight": 0.0,
+            "multiplicative_weight": 1.0,
         },
     )
+
+    timeout_alignment = RewTerm(
+        func=mdp.rk_joint_angle_timeout_reward,
+        weight=13.3,
+        params={
+            "target_angle": flex_1_pole_target,
+            "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed", "fixed_to_flex_1"]),
+            "linear_weight": 10.0,
+            "exp_weight": 5.0,
+        },
+    )
+
+    timeout_vel_reward = RewTerm(
+        func=mdp.rk_timeout_vel_reward,
+        weight=-2.0,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed", "fixed_to_flex_1"]),
+        },
+    )
+
+    fixed_joint_vel_l2 = RewTerm(
+        func=mdp.joint_vel_l2,
+        weight=-0.008,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed"])},
+    )
+
+    flex_1_joint_vel_l2 = RewTerm(
+        func=mdp.joint_vel_l2,
+        weight=-0.02,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["fixed_to_flex_1"])},
+    )
+
     action_smoothness = RewTerm(
-        func=mdp.action_rate_l2,
-        weight=-0.002,
+        func=mdp.rk_action_rate_l2,
+        weight=-0.011,
+        params={
+            "flex_target": flex_1_pole_target,
+            "fixed_target": fixed_pole_target,
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+            "fixed_pole_joint": "base_to_fixed",
+            "flex_pole_joint": "fixed_to_flex_1",
+            "high_weight": 1.0,
+            "low_weight": 0.2,
+        },
+    )
+    flex_joint_limit_penalty = RewTerm(
+        func=mdp.rk_flex1_joint_limit_penalty,
+        weight=-0.02,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+            "flex_pole_joint": "fixed_to_flex_1",
+        },
+    )
+
+
+@configclass
+class CurriculumCfg:
+    """Three-stage curriculum within first 3000 iterations.
+
+    Stage 1 (0-1000): fixed pole upright as primary objective (via base weights).
+    Stage 2 (1000-2000): boost flex pole absolute alignment and relax fixed term.
+    Stage 3 (2000-3000+): increase velocity/smoothness/limit penalties for settling.
+    """
+
+    stage2_flex_focus = CurrTerm(
+        func=mdp.modify_reward_weight_relative,
+        params={
+            "term_name": "flex_alignment",
+            "weight": 2.62,
+            "num_iters": 800,
+            "steps_per_env_per_iter": 32,
+        },
+    )
+
+    stage2_fixed_relax = CurrTerm(
+        func=mdp.modify_reward_weight_relative,
+        params={
+            "term_name": "fixed_alignment",
+            "weight": 1.42,
+            "num_iters": 800,
+            "steps_per_env_per_iter": 32,
+        },
+    )
+
+    # stage2_pos_reward_relax = CurrTerm(
+    #     func=mdp.modify_reward_weight_relative,
+    #     params={
+    #         "term_name": "pos_reward",
+    #         "weight": 3.0,
+    #         "num_iters": 1000,
+    #         "steps_per_env_per_iter": 32,
+    #     },
+    # )
+
+    smoothness_penalty = CurrTerm(
+        func=mdp.modify_reward_weight_relative,
+        params={
+            "term_name": "action_smoothness",
+            "weight": -0.032,
+            "num_iters": 1600,
+            "steps_per_env_per_iter": 32,
+        },
+    )
+
+    fixed_vel_penalty = CurrTerm(
+        func=mdp.modify_reward_weight_relative,
+        params={
+            "term_name": "fixed_joint_vel_l2",
+            "weight": -0.020,
+            "num_iters": 1600,
+            "steps_per_env_per_iter": 32,
+        },
+    )
+
+    flex_vel_penalty = CurrTerm(
+        func=mdp.modify_reward_weight_relative,
+        params={
+            "term_name": "flex_1_joint_vel_l2",
+            "weight": -0.036,
+            "num_iters": 1600,
+            "steps_per_env_per_iter": 32,
+        },
+    )
+
+    flex_limit_penalty = CurrTerm(
+        func=mdp.modify_reward_weight_relative,
+        params={
+            "term_name": "flex_joint_limit_penalty",
+            "weight": -0.08,
+            "num_iters": 2000,
+            "steps_per_env_per_iter": 32,
+        },
     )
 
 
@@ -262,6 +405,7 @@ class CircularCartpoleSim2realEnvCfg(ManagerBasedRLEnvCfg):
     # MDP settings
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
+    curriculum: CurriculumCfg = CurriculumCfg()
 
     # Post initialization
     def __post_init__(self) -> None:
@@ -270,7 +414,7 @@ class CircularCartpoleSim2realEnvCfg(ManagerBasedRLEnvCfg):
         self.decimation = 1
         self.episode_length_s = 5
         # viewer settings
-        self.viewer.eye = (8.0, 0.0, 5.0)
+        self.viewer.eye = (0, -10.0, 3.0)
         # simulation settings
         self.sim.dt = 1 / 250
         self.sim.render_interval = self.decimation

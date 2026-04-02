@@ -7,8 +7,21 @@
 Python module serving as a project/extension template.
 """
 
-# Register Gym environments.
-from .tasks import *
+def _is_optional_runtime_dependency_error(exc: ModuleNotFoundError) -> bool:
+	missing_name = getattr(exc, "name", "") or ""
+	return missing_name.split(".", 1)[0] in {"pxr", "omni", "isaacsim"}
 
-# Register UI extensions.
-from .ui_extension_example import *
+
+try:
+	# Register Gym environments.
+	from .tasks import *
+except ModuleNotFoundError as exc:
+	if not _is_optional_runtime_dependency_error(exc):
+		raise
+
+try:
+	# Register UI extensions.
+	from .ui_extension_example import *
+except ModuleNotFoundError as exc:
+	if not _is_optional_runtime_dependency_error(exc):
+		raise

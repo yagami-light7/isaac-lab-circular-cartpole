@@ -95,10 +95,11 @@ def _compute_alignment_errors(
     # Compute joint indices (cached separately for reuse)
     asset_id = id(asset)
     if asset_id not in _joint_index_cache:
-        _joint_index_cache[asset_id] = {
-            "fixed": asset.find_joints(fixed_pole_joint)[0][0],
-            "flex": asset.find_joints(flex_pole_joint)[0][0],
-        }
+        _joint_index_cache[asset_id] = {}
+    if "fixed" not in _joint_index_cache[asset_id]:
+        _joint_index_cache[asset_id]["fixed"] = asset.find_joints(fixed_pole_joint)[0][0]
+    if "flex" not in _joint_index_cache[asset_id]:
+        _joint_index_cache[asset_id]["flex"] = asset.find_joints(flex_pole_joint)[0][0]
     indices = _joint_index_cache[asset_id]
 
     # Get joint positions and wrap to [-pi, pi]
@@ -283,10 +284,11 @@ def rk_flex1_absolute_alignment(
     # Get or cache joint indices
     asset_id = id(asset)
     if asset_id not in _joint_index_cache:
-        _joint_index_cache[asset_id] = {
-            "fixed": asset.find_joints(fixed_pole_joint)[0][0],
-            "flex": asset.find_joints(flex_pole_joint)[0][0],
-        }
+        _joint_index_cache[asset_id] = {}
+    if "fixed" not in _joint_index_cache[asset_id]:
+        _joint_index_cache[asset_id]["fixed"] = asset.find_joints(fixed_pole_joint)[0][0]
+    if "flex" not in _joint_index_cache[asset_id]:
+        _joint_index_cache[asset_id]["flex"] = asset.find_joints(flex_pole_joint)[0][0]
     indices = _joint_index_cache[asset_id]
 
     # Get joint positions
@@ -387,3 +389,137 @@ def rk_flex1_joint_limit_penalty(
     violation = torch.square(lower_violation + upper_violation)
 
     return violation
+
+def rk_get_joint_angle_error(
+    env: ManagerBasedRLEnv,
+    target_angle: float,
+    asset_cfg: SceneEntityCfg,
+    joint_name: str | None = None,
+    joint_index: int | None = None,
+) -> torch.Tensor:
+    """
+    计算指定关节的“绝对角度”与目标角度之间的最短角距离（绝对误差）。
+
+    Args:
+        env: RL环境实例
+        joint_name: 关节名称（兼容旧接口）
+        joint_index: 关节索引（推荐，新接口）
+        target_angle: 目标角度（弧度）
+        asset_cfg: 机器人资产配置
+
+    Returns:
+        torch.Tensor: 形状为 (N, 1) 的误差张量，值域为 [0, π]
+    """
+    if joint_index is None and joint_name is None:
+        raise ValueError("Either joint_index or joint_name must be provided.")
+
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    joint_pos = asset.data.joint_pos[:, asset_cfg.joint_ids]
+    joint_pos = torch.nan_to_num(joint_pos, nan=0.0, posinf=0.0, neginf=0.0)
+    joint_pos = torch.clamp(joint_pos, -4 * torch.pi, 4 * torch.pi)
+    abs_angles = torch.cumsum(joint_pos, dim=-1)
+
+    if joint_index is None:
+        asset_id = id(asset)
+        if asset_id not in _joint_index_cache:
+            _joint_index_cache[asset_id] = {}
+        if joint_name not in _joint_index_cache[asset_id]:
+            _joint_index_cache[asset_id][joint_name] = asset.find_joints(joint_name)[0][0]
+
+        target_joint_id = _joint_index_cache[asset_id][joint_name]
+        joint_ids_list = list(asset_cfg.joint_ids)
+        if target_joint_id not in joint_ids_list:
+            raise ValueError(
+                f"joint_name={joint_name} (id={target_joint_id}) not found in asset_cfg.joint_ids={joint_ids_list}."
+            )
+        joint_index = joint_ids_list.index(target_joint_id)
+
+    pole_abs_angle = abs_angles[:, joint_index]
+
+    error = torch.abs(wrap_to_pi(pole_abs_angle - target_angle))
+    error = torch.clamp(error, min=0.0, max=torch.pi)
+    return error.unsqueeze(-1)
+
+def rk_joint_angle_alignment_reward(
+    env: ManagerBasedRLEnv,
+    linear_weight: float,
+    exp_weight: float,
+    target_angle: float,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    joint_name: str | None = None,
+    joint_index: int | None = None,
+) -> torch.Tensor:
+    """
+    基于单个关节相对角度的对齐奖励。
+    结合了线性奖励和指数奖励，使得网络在远离目标时有固定梯度，接近目标时有更强的微调激励。
+
+    Args:
+        env: RL环境实例
+        linear_weight: 线性奖励的权重比例
+        exp_weight: 指数奖励的权重比例
+        joint_name: 关节名称（兼容旧接口）
+        joint_index: 关节索引（推荐，新接口）
+        target_angle: 目标角度（弧度）
+        asset_cfg: 机器人资产配置
+    """
+    error = rk_get_joint_angle_error(
+        env=env,
+        target_angle=target_angle,
+        asset_cfg=asset_cfg,
+        joint_name=joint_name,
+        joint_index=joint_index,
+    )  # (N, 1) 范围：[0, π]
+
+    # 线性奖励部分：误差越大奖励越小，范围 [0, 1]
+    linear_reward = (torch.pi - error) / torch.pi 
+    # 指数奖励部分：在靠近0误差时会产生强烈的尖峰，范围 (0, 1]
+    exp_reward = torch.exp(-1.0 * error) 
+
+    # 组合两部分奖励
+    combined_reward = linear_weight * linear_reward + exp_weight * exp_reward
+    
+    # 过滤 NaN 或无穷大值
+    combined_reward = torch.nan_to_num(combined_reward, nan=0.0, posinf=0.0, neginf=0.0)
+
+    return combined_reward.squeeze(-1) # 返回形状 (N,)
+
+
+
+
+def rk_joint_angle_timeout_reward(
+    env: ManagerBasedRLEnv,
+    linear_weight: float,
+    exp_weight: float,
+    target_angle: float,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """
+    终止时刻奖励（角度版本）。
+    只在 episode 超时时，对所有杆的角度接近程度求平均奖励。
+    所有杆使用同一个 target_angle。
+    """
+    time_outs = env.termination_manager.time_outs
+    if not torch.any(time_outs):
+        return torch.zeros_like(time_outs, dtype=torch.float32)
+
+    asset: Articulation = env.scene[asset_cfg.name]
+    joint_pos = asset.data.joint_pos[:, asset_cfg.joint_ids]
+    # NaN + 极端值保护
+    joint_pos = torch.nan_to_num(joint_pos, nan=0.0, posinf=0.0, neginf=0.0)
+    joint_pos = torch.clamp(joint_pos, -4 * torch.pi, 4 * torch.pi)
+    abs_angles = torch.cumsum(joint_pos, dim=-1)  # (N, num_joints)
+
+    angle_errors = torch.abs(wrap_to_pi(abs_angles - target_angle))
+    angle_errors = torch.clamp(angle_errors, 0.0, torch.pi)
+
+    linear_rewards = (torch.pi - angle_errors) / torch.pi
+    exp_rewards = torch.exp(-1.0 * angle_errors)
+
+    combined = linear_weight * linear_rewards + exp_weight * exp_rewards
+    avg_reward = torch.mean(combined, dim=-1)  # (N,)
+    # NaN 保护
+    avg_reward = torch.nan_to_num(avg_reward, nan=0.0, posinf=0.0, neginf=0.0)
+
+    return torch.where(time_outs, avg_reward, torch.zeros_like(avg_reward))
+

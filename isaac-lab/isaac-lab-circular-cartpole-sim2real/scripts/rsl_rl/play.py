@@ -56,6 +56,18 @@ parser.add_argument(
     default=False,
     help="Run in real-time, if possible.",
 )
+parser.add_argument(
+    "--render_fps",
+    type=float,
+    default=60.0,
+    help="Target viewer render FPS for play (<=0 disables overriding render interval).",
+)
+parser.add_argument(
+    "--max_steps",
+    type=int,
+    default=None,
+    help="Maximum simulation steps after loading policy (use small value for export-only runs).",
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -76,7 +88,9 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
+import glob
 import os
+import re
 import time
 import torch
 
@@ -91,7 +105,11 @@ from isaaclab.envs import (
 )
 from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.dict import print_dict
-from isaaclab.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
+try:
+    from isaaclab.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
+except ImportError:
+    def get_published_pretrained_checkpoint(*_args, **_kwargs):
+        return None
 
 from isaaclab_rl.rsl_rl import (
     RslRlBaseRunnerCfg,
@@ -107,6 +125,20 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 import circular_cartpole_sim2real.tasks  # noqa: F401
 
 
+def _pick_highest_step_checkpoint(resume_path: str) -> str:
+    """Prefer the highest-step model_*.pt in the same run directory."""
+    run_dir = os.path.dirname(resume_path)
+    model_paths = glob.glob(os.path.join(run_dir, "model_*.pt"))
+    if not model_paths:
+        return resume_path
+
+    def _step_from_path(path: str) -> int:
+        match = re.search(r"model_(\d+)\.pt$", os.path.basename(path))
+        return int(match.group(1)) if match else -1
+
+    return max(model_paths, key=_step_from_path)
+
+
 @hydra_task_config(args_cli.task, args_cli.agent)
 def main(
     env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg,
@@ -119,9 +151,15 @@ def main(
 
     # override configurations with non-hydra CLI arguments
     agent_cfg: RslRlBaseRunnerCfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
-    env_cfg.scene.num_envs = (
-        args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
-    )
+    if args_cli.num_envs is not None:
+        env_cfg.scene.num_envs = args_cli.num_envs
+    elif not getattr(args_cli, "headless", False):
+        # Interactive rendering defaults to a single environment for smooth playback.
+        env_cfg.scene.num_envs = 1
+
+    if args_cli.render_fps > 0:
+        target_render_dt = 1.0 / args_cli.render_fps
+        env_cfg.sim.render_interval = max(1, int(round(target_render_dt / env_cfg.sim.dt)))
 
     # set the environment seed
     # note: certain randomizations occur in the environment initialization so we set the seed here
@@ -147,6 +185,7 @@ def main(
         resume_path = get_checkpoint_path(
             log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint
         )
+        resume_path = _pick_highest_step_checkpoint(resume_path)
 
     log_dir = os.path.dirname(resume_path)
 
@@ -236,8 +275,12 @@ def main(
             obs, _, dones, _ = env.step(actions)
             # reset recurrent states for episodes that have terminated
             policy_nn.reset(dones)
-        if args_cli.video:
             timestep += 1
+
+        if args_cli.max_steps is not None and args_cli.max_steps > 0 and timestep >= args_cli.max_steps:
+            break
+
+        if args_cli.video:
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break

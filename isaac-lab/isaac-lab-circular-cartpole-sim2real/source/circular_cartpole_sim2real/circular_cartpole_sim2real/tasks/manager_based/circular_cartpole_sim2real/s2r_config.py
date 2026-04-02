@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from math import pi
+from pathlib import Path
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import (
     ImplicitActuatorCfg,
@@ -12,16 +12,15 @@ from isaaclab.actuators import (
     IdealPDActuatorCfg,
 )
 from isaaclab.assets import ArticulationCfg
-import os
 
 
 ##
 # Configuration
 ##
 
-l1_urdf_path = os.path.join(
-    os.getcwd(),
-    "models\\S2R_Sim_L1.SLDASM\\urdf\\S2R_Sim_L1.SLDASM.urdf",
+_PROJECT_ROOT = Path(__file__).resolve().parents[6]
+l1_urdf_path = str(
+    _PROJECT_ROOT / "models" / "S2R_Sim_L1.SLDASM" / "urdf" / "S2R_Sim_L1.SLDASM.urdf"
 )
 
 
@@ -62,8 +61,8 @@ CIRCULAR_CARTPOLE_S2R_ROBOT_L1_CFG = ArticulationCfg(
             joint_names_expr=["base_to_fixed"],
             effort_limit=3.0,
             velocity_limit=10.0,
-            stiffness=7.0,
-            damping=0.7,
+            stiffness=8.0,
+            damping=1.0,
             friction=0.0001,
             min_delay=7,
             max_delay=8,

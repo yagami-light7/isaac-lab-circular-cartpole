@@ -47,7 +47,7 @@
 下面记作：
 
 ```bash
-<ISAACLAB_ROOT>
+/home/light/workspace/IsaacLab
 ```
 
 ### 1.2 当前 sim2real 扩展根目录
@@ -55,7 +55,7 @@
 就是这个仓库里扩展项目对应的 Ubuntu 路径：
 
 ```bash
-<EXT_ROOT>
+/home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real
 ```
 
 它对应 Windows 上的：
@@ -67,7 +67,7 @@ E:\RoboMaster\RL\isaac-lab-circular-cartpole\isaac-lab\isaac-lab-circular-cartpo
 ### 1.3 扩展 Python 包目录
 
 ```bash
-<EXT_ROOT>/source/circular_cartpole_sim2real
+/home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real/source/circular_cartpole_sim2real
 ```
 
 ---
@@ -77,13 +77,13 @@ E:\RoboMaster\RL\isaac-lab-circular-cartpole\isaac-lab\isaac-lab-circular-cartpo
 进入扩展根目录：
 
 ```bash
-cd <EXT_ROOT>
+cd /home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real
 ```
 
 执行：
 
 ```bash
-<ISAACLAB_ROOT>/isaaclab.sh -p -m pip install -e source/circular_cartpole_sim2real
+/home/light/workspace/IsaacLab/isaaclab.sh -p -m pip install -e source/circular_cartpole_sim2real
 ```
 
 这一步的目标不是“训练”，只是保证下面这些脚本都能 import：
@@ -106,7 +106,7 @@ cd <EXT_ROOT>
 
 - 不要改观测合同
 - 先反复确认你执行的是 Isaac Lab 自己的 `isaaclab.sh`
-- 再确认 `pip install -e source/circular_cartpole_sim2real` 是在 `<EXT_ROOT>` 下执行的
+- 再确认 `pip install -e source/circular_cartpole_sim2real` 是在 `/home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real` 下执行的
 
 ---
 
@@ -117,9 +117,9 @@ cd <EXT_ROOT>
 ### 3.1 推荐的第一条检查命令
 
 ```bash
-cd <EXT_ROOT>
+cd /home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real
 
-<ISAACLAB_ROOT>/isaaclab.sh -p scripts/check_observation_contract.py \
+/home/light/workspace/IsaacLab/isaaclab.sh -p scripts/check_observation_contract.py \
   --task RK-Circular-Cartpole-S2R-L1-V1 \
   --num_envs 1 \
   --steps 12 \
@@ -210,9 +210,9 @@ cd <EXT_ROOT>
 执行：
 
 ```bash
-cd <EXT_ROOT>
+cd /home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real
 
-<ISAACLAB_ROOT>/isaaclab.sh -p scripts/check_observation_contract.py \
+/home/light/workspace/IsaacLab/isaaclab.sh -p scripts/check_observation_contract.py \
   --task RK-Circular-Cartpole-S2R-L1-REAL-V0 \
   --num_envs 1 \
   --steps 12 \
@@ -245,9 +245,9 @@ cd <EXT_ROOT>
 执行：
 
 ```bash
-cd <EXT_ROOT>
+cd /home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real
 
-<ISAACLAB_ROOT>/isaaclab.sh -p scripts/rsl_rl/train.py \
+/home/light/workspace/IsaacLab/isaaclab.sh -p scripts/rsl_rl/train.py \
   --task RK-Circular-Cartpole-S2R-L1-REAL-V0 \
   --num_envs 512 \
   --max_iterations 20 \
@@ -270,7 +270,7 @@ cd <EXT_ROOT>
 默认会在：
 
 ```text
-<EXT_ROOT>/logs/rsl_rl/cartpole_s2r_l1_real_v0/<时间戳_run>
+/home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real/logs/rsl_rl/cartpole_s2r_l1_real_v0/<时间戳_run>
 ```
 
 ### 5.3 做到什么程度算通过
@@ -292,9 +292,9 @@ cd <EXT_ROOT>
 推荐先直接训部署任务：
 
 ```bash
-cd <EXT_ROOT>
+cd /home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real
 
-<ISAACLAB_ROOT>/isaaclab.sh -p scripts/rsl_rl/train.py \
+/home/light/workspace/IsaacLab/isaaclab.sh -p scripts/rsl_rl/train.py \
   --task RK-Circular-Cartpole-S2R-L1-REAL-V0 \
   --num_envs 4096 \
   --max_iterations 2000 \
@@ -354,18 +354,18 @@ cd <EXT_ROOT>
 位置通常类似：
 
 ```text
-<EXT_ROOT>/logs/rsl_rl/cartpole_s2r_l1_real_v0/<run_name>/model_XXXX.pt
+/home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real/logs/rsl_rl/cartpole_s2r_l1_real_v0/<run_name>/model_XXXX.pt
 ```
 
 ### 7.2 导出命令
 
 ```bash
-cd <EXT_ROOT>
+cd /home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real
 
-<ISAACLAB_ROOT>/isaaclab.sh -p scripts/rsl_rl/play.py \
+/home/light/workspace/IsaacLab/isaaclab.sh -p scripts/rsl_rl/play.py \
   --task RK-Circular-Cartpole-S2R-L1-REAL-V0 \
   --num_envs 1 \
-  --checkpoint <EXT_ROOT>/logs/rsl_rl/cartpole_s2r_l1_real_v0/<run_name>/model_XXXX.pt \
+   --checkpoint /home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real/logs/rsl_rl/cartpole_s2r_l1_real_v0/<run_name>/model_XXXX.pt \
   --headless
 ```
 
@@ -383,7 +383,7 @@ exported/policy.onnx
 即类似：
 
 ```text
-<EXT_ROOT>/logs/rsl_rl/cartpole_s2r_l1_real_v0/<run_name>/exported/policy.onnx
+/home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real/logs/rsl_rl/cartpole_s2r_l1_real_v0/<run_name>/exported/policy.onnx
 ```
 
 ### 7.4 这一步做到什么程度算通过
@@ -408,11 +408,11 @@ exported/policy.onnx
 ### 8.1 对 `L1-V1` 存一份
 
 ```bash
-cd <EXT_ROOT>
+cd /home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real
 
 mkdir -p logs
 
-<ISAACLAB_ROOT>/isaaclab.sh -p scripts/check_observation_contract.py \
+/home/light/workspace/IsaacLab/isaaclab.sh -p scripts/check_observation_contract.py \
   --task RK-Circular-Cartpole-S2R-L1-V1 \
   --num_envs 1 \
   --steps 24 \
@@ -426,9 +426,9 @@ mkdir -p logs
 ### 8.2 对 `L1-REAL-V0` 再存一份
 
 ```bash
-cd <EXT_ROOT>
+cd /home/light/workspace/light_extension/isaac-lab-circular-cartpole-sim2real/isaac-lab-circular-cartpole/isaac-lab/isaac-lab-circular-cartpole-sim2real
 
-<ISAACLAB_ROOT>/isaaclab.sh -p scripts/check_observation_contract.py \
+/home/light/workspace/IsaacLab/isaaclab.sh -p scripts/check_observation_contract.py \
   --task RK-Circular-Cartpole-S2R-L1-REAL-V0 \
   --num_envs 1 \
   --steps 24 \
@@ -533,4 +533,3 @@ cd <EXT_ROOT>
 只有当你能明确说出下面这句话时，才回 Windows：
 
 > 我已经在 Ubuntu 上确认策略输入仍是 15 维 raw-relative 合同，并在 `RK-Circular-Cartpole-S2R-L1-REAL-V0` 上拿到了可运行 checkpoint，`play.py` 已成功导出 `policy.onnx`。
-

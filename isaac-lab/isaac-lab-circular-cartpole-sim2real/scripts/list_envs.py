@@ -3,15 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""
-Script to print all the available environments in Isaac Lab.
-
-The script iterates over all registered environments and stores the details in a table.
-It prints the name of the environment, the entry point and the config file.
-
-All the environments are registered in the `circular_cartpole_sim2real` extension. They start
-with `Isaac` in their name.
-"""
+"""Script to print available environments registered in Gym."""
 
 """Launch Isaac Sim Simulator first."""
 
@@ -26,12 +18,28 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym
 from prettytable import PrettyTable
+import argparse
 
 import circular_cartpole_sim2real.tasks  # noqa: F401
 
 
 def main():
-    """Print all environments registered in `circular_cartpole_sim2real` extension."""
+    """Print registered environments, optionally filtered by keyword."""
+    parser = argparse.ArgumentParser(description="List registered Gym environments.")
+    parser.add_argument(
+        "--keyword",
+        type=str,
+        default=None,
+        help="Optional keyword to filter task names.",
+    )
+    parser.add_argument(
+        "--only-project",
+        action="store_true",
+        default=False,
+        help="Show only environments registered by circular_cartpole_sim2real.",
+    )
+    args = parser.parse_args()
+
     # print all the available environments
     table = PrettyTable(["S. No.", "Task Name", "Entry Point", "Config"])
     table.title = "Available Environments in Isaac Lab"
@@ -42,20 +50,34 @@ def main():
 
     # count of environments
     index = 0
-    # acquire all Isaac environments names
+    keyword = args.keyword.lower() if args.keyword else None
+
+    # acquire all registered environment names
     for task_spec in gym.registry.values():
-        if "Template-" in task_spec.id:
-            # add details to table
-            table.add_row(
-                [
-                    index + 1,
-                    task_spec.id,
-                    task_spec.entry_point,
-                    task_spec.kwargs["env_cfg_entry_point"],
-                ]
-            )
-            # increment count
-            index += 1
+        task_name = task_spec.id
+        if keyword and keyword not in task_name.lower():
+            continue
+
+        entry_point = str(task_spec.entry_point)
+        env_cfg_entry = str(task_spec.kwargs.get("env_cfg_entry_point", ""))
+        if args.only_project:
+            joined_text = f"{task_name} {entry_point} {env_cfg_entry}".lower()
+            if "circular_cartpole_sim2real" not in joined_text:
+                continue
+
+        env_cfg = task_spec.kwargs.get("env_cfg_entry_point", "-")
+
+        # add details to table
+        table.add_row(
+            [
+                index + 1,
+                task_name,
+                entry_point,
+                env_cfg,
+            ]
+        )
+        # increment count
+        index += 1
 
     print(table)
 

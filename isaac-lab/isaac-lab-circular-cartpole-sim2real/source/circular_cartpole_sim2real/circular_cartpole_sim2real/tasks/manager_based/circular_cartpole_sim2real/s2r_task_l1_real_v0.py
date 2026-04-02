@@ -9,8 +9,9 @@ from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.utils import configclass
 
 from . import mdp
-from .s2r_task_l1_v1 import (
+from .s2r_task_l1_v0 import (
     CircularCartpoleSim2realSceneCfg,
+    CurriculumCfg,
     EventCfg,
     ObservationsCfg,
     RewardsCfg,
@@ -18,15 +19,15 @@ from .s2r_task_l1_v1 import (
 )
 
 
-pos_clip_range = (-2 * math.pi, 2 * math.pi)
-pos_scale = 0.1
+pos_clip_range = (-2*math.pi, 2*math.pi)
+pos_scale = 0.05
 
 
 @configclass
 class ActionsCfg:
     """Action specifications for the real-hardware-aligned L1 task.
 
-    This variant keeps the L1-V1 task, rewards, and randomization intact and only
+    This variant keeps the L1-V0 task, rewards, and randomization intact and only
     changes the action semantics to a relative joint-position command so the
     policy output maps cleanly onto the host->MC02 position-delta contract.
     """
@@ -50,10 +51,11 @@ class CircularCartpoleSim2realL1RealV0EnvCfg(ManagerBasedRLEnvCfg):
     events: EventCfg = EventCfg()
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
+    curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self) -> None:
         self.decimation = 1
         self.episode_length_s = 5
-        self.viewer.eye = (8.0, 0.0, 5.0)
+        self.viewer.eye = (0, -10.0, 3.0)
         self.sim.dt = 1 / 250
         self.sim.render_interval = self.decimation

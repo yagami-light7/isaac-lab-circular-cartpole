@@ -73,6 +73,16 @@ cli_args.add_rsl_rl_args(parser)
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
 
+_required_ext = "--enable isaacsim.asset.importer.urdf"
+if hasattr(args_cli, "kit_args"):
+    current_kit_args = (args_cli.kit_args or "").strip()
+    if "isaacsim.asset.importer.urdf" not in current_kit_args:
+        args_cli.kit_args = (
+            f"{current_kit_args} {_required_ext}".strip()
+            if current_kit_args
+            else _required_ext
+        )
+
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
