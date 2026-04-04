@@ -44,3 +44,14 @@ gym.register(
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg_s2r_l1_real_v0.yaml",
     },
 )
+
+gym.register(
+    id="RK-Circular-Cartpole-S2R-L1-REAL-PURE-RL-R1",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.s2r_task_l1_real_pure_rl_r1:CircularCartpoleSim2realL1RealPureRlR1EnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg_l1_real_pure_rl_r1:PPORunnerCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg_s2r_l1_real_v0.yaml",
+    },
+)

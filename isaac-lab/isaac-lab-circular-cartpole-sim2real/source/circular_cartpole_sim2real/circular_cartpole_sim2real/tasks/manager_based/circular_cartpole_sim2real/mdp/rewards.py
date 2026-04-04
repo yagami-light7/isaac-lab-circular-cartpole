@@ -127,6 +127,60 @@ def _compute_alignment_errors(
     return result
 
 
+def _get_effective_action_delta_pair(
+    env: ManagerBasedRLEnv,
+    action_name: str = "motor_pos",
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """读取当前步和上一步“真正执行的动作增量”。
+
+    旧任务里很多 reward 默认拿的是 raw action。
+    新训练合同里我们明确改成：reward 和 last_action 都围绕真实执行 delta 建模。
+    """
+
+    term = env.action_manager.get_term(action_name)
+    if hasattr(term, "processed_actions") and hasattr(term, "prev_applied_actions"):
+        return term.processed_actions, term.prev_applied_actions
+    return env.action_manager.action, env.action_manager.prev_action
+
+
+def _compute_upright_metrics(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    fixed_pole_joint: str,
+    flex_pole_joint: str,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """计算近直立控制最关心的四个量。
+
+    返回值依次为：
+    - fixed 杆绝对角
+    - 活动杆尖端绝对角
+    - fixed 杆角速度
+    - 活动杆尖端角速度
+    """
+
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    asset_id = id(asset)
+    if asset_id not in _joint_index_cache:
+        _joint_index_cache[asset_id] = {}
+    if "fixed" not in _joint_index_cache[asset_id]:
+        _joint_index_cache[asset_id]["fixed"] = asset.find_joints(fixed_pole_joint)[0][0]
+    if "flex" not in _joint_index_cache[asset_id]:
+        _joint_index_cache[asset_id]["flex"] = asset.find_joints(flex_pole_joint)[0][0]
+    indices = _joint_index_cache[asset_id]
+
+    fixed_pos = asset.data.joint_pos[:, indices["fixed"]]
+    flex_pos = asset.data.joint_pos[:, indices["flex"]]
+    fixed_vel = asset.data.joint_vel[:, indices["fixed"]]
+    flex_vel = asset.data.joint_vel[:, indices["flex"]]
+
+    base_abs = wrap_to_pi(fixed_pos)
+    tip_abs = wrap_to_pi(fixed_pos + flex_pos)
+    tip_vel = fixed_vel + flex_vel
+
+    return base_abs, tip_abs, fixed_vel, tip_vel
+
+
 def rk_alignment_pos_reward(
     env: ManagerBasedRLEnv,
     flex_target: float,
@@ -213,10 +267,8 @@ def rk_action_rate_l2(
     decay_factor = torch.exp(-1.0 * alignment_error)
     weight_multiplier = low_weight + (high_weight - low_weight) * decay_factor
 
-    # Compute action rate penalty
-    action_rate_penalty = torch.sum(
-        torch.square(env.action_manager.action - env.action_manager.prev_action), dim=1
-    )
+    current_delta, previous_delta = _get_effective_action_delta_pair(env)
+    action_rate_penalty = torch.sum(torch.square(current_delta - previous_delta), dim=1)
 
     return weight_multiplier * action_rate_penalty
 
@@ -251,10 +303,61 @@ def rk_action_l2(
     decay_factor = torch.exp(-1.0 * alignment_error)
     weight_multiplier = low_weight + (high_weight - low_weight) * decay_factor
 
-    # Compute action penalty
-    action_penalty = torch.sum(torch.square(env.action_manager.action), dim=1)
+    current_delta, _ = _get_effective_action_delta_pair(env)
+    action_penalty = torch.sum(torch.square(current_delta), dim=1)
 
     return weight_multiplier * action_penalty
+
+
+def rk_upright_hold_reward(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    fixed_pole_joint: str,
+    flex_pole_joint: str,
+    base_angle_window: float = 0.12,
+    tip_angle_window: float = 0.12,
+    base_vel_window: float = 1.2,
+    tip_vel_window: float = 1.5,
+) -> torch.Tensor:
+    """在近直立、低速度时提供持续保持奖励。
+
+    这项奖励的目的不是再奖励一次“对齐”，而是明确告诉策略：
+    进入直立窗口之后，继续稳稳待在里面，本身就是高价值行为。
+    """
+
+    base_abs, tip_abs, base_vel, tip_vel = _compute_upright_metrics(
+        env, asset_cfg, fixed_pole_joint, flex_pole_joint
+    )
+
+    hold_mask = (
+        (torch.abs(base_abs) <= base_angle_window)
+        & (torch.abs(tip_abs) <= tip_angle_window)
+        & (torch.abs(base_vel) <= base_vel_window)
+        & (torch.abs(tip_vel) <= tip_vel_window)
+    )
+    return hold_mask.to(dtype=torch.float32)
+
+
+def rk_near_upright_velocity_l2(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    fixed_pole_joint: str,
+    flex_pole_joint: str,
+    base_angle_window: float = 0.20,
+    tip_angle_window: float = 0.20,
+) -> torch.Tensor:
+    """在近直立区域单独加强速度惩罚。"""
+
+    base_abs, tip_abs, base_vel, tip_vel = _compute_upright_metrics(
+        env, asset_cfg, fixed_pole_joint, flex_pole_joint
+    )
+
+    near_mask = (
+        (torch.abs(base_abs) <= base_angle_window)
+        & (torch.abs(tip_abs) <= tip_angle_window)
+    ).to(dtype=torch.float32)
+    velocity_penalty = torch.square(base_vel) + torch.square(tip_vel)
+    return near_mask * velocity_penalty
 
 
 def rk_flex1_absolute_alignment(
