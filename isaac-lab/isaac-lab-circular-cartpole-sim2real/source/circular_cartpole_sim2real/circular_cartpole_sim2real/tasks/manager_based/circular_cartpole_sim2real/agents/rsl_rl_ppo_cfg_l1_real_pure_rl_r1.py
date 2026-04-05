@@ -22,12 +22,12 @@ class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
     """
 
     num_steps_per_env = 32
-    max_iterations = 12000
+    max_iterations = 10000
     save_interval = 100
     experiment_name = "cartpole_s2r_l1_real_pure_rl_r1"
     clip_actions = 5.0
     policy = RslRlPpoActorCriticCfg(
-        init_noise_std=0.5,
+        init_noise_std=0.25,
         actor_obs_normalization=True,
         critic_obs_normalization=True,
         actor_hidden_dims=[128, 128, 64],
@@ -38,11 +38,11 @@ class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
-        entropy_coef=0.01,
+        entropy_coef=0.003,
         num_learning_epochs=5,
         num_mini_batches=8,
-        learning_rate=3e-4,
-        schedule="adaptive",
+        learning_rate=1.5e-4,
+        schedule="fixed",
         gamma=0.995,
         lam=0.95,
         desired_kl=0.005,

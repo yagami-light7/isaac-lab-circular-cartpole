@@ -338,6 +338,74 @@ def rk_upright_hold_reward(
     return hold_mask.to(dtype=torch.float32)
 
 
+def rk_upright_hold_soft_reward(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    fixed_pole_joint: str,
+    flex_pole_joint: str,
+    base_angle_window: float = 0.12,
+    tip_angle_window: float = 0.12,
+    base_vel_window: float = 1.2,
+    tip_vel_window: float = 1.5,
+    angle_softness: float = 0.4,
+    vel_softness: float = 0.4,
+) -> torch.Tensor:
+    """在近直立、低速度时提供平滑保持奖励。
+
+    与二值 hold 奖励相比，本函数不会在阈值边缘发生 0/1 跳变，
+    而是通过指数核平滑衰减，减少课程切换阶段的训练震荡。
+
+    数学形式（每个并行环境一条样本）：
+
+    设
+    - b_a = |base_abs|, t_a = |tip_abs|
+    - b_v = |base_vel|, t_v = |tip_vel|
+    - w_ba, w_ta, w_bv, w_tv 分别是角度/速度窗口
+    - s_a, s_v 分别是 angle_softness、vel_softness
+
+    则四个子项分别为高斯核：
+    - r_ba = exp(-(b_a / (w_ba * s_a))^2)
+    - r_ta = exp(-(t_a / (w_ta * s_a))^2)
+    - r_bv = exp(-(b_v / (w_bv * s_v))^2)
+    - r_tv = exp(-(t_v / (w_tv * s_v))^2)
+
+    为了避免“角度已经基本到位，但速度项把奖励整体压到接近 0”的问题，
+    最终不再直接使用四项连乘，而是改成：
+    - angle_score = sqrt(r_ba * r_ta)
+    - vel_score = 0.5 * (r_bv + r_tv)
+    - r = angle_score * (0.25 + 0.75 * vel_score)
+
+    这样仍然要求角度先接近直立，但对速度的要求从“硬门控”改成“平滑调制”，
+    让策略在靠近稳住窗口时更早收到正反馈。
+    """
+
+    base_abs, tip_abs, base_vel, tip_vel = _compute_upright_metrics(
+        env, asset_cfg, fixed_pole_joint, flex_pole_joint
+    )
+
+    # 角度窗口和速度窗口经过 softness 缩放后，作为高斯核的“有效标准化尺度”。
+    # softness 越小，曲线越尖锐（更像硬阈值）；softness 越大，曲线越平缓。
+    base_angle_term = torch.exp(
+        -torch.square(base_abs / (base_angle_window * angle_softness + 1e-6))
+    )
+    tip_angle_term = torch.exp(
+        -torch.square(tip_abs / (tip_angle_window * angle_softness + 1e-6))
+    )
+
+    # 速度项同理：速度越接近 0，奖励越接近 1；速度偏大时按平方指数衰减。
+    base_vel_term = torch.exp(
+        -torch.square(base_vel / (base_vel_window * vel_softness + 1e-6))
+    )
+    tip_vel_term = torch.exp(
+        -torch.square(tip_vel / (tip_vel_window * vel_softness + 1e-6))
+    )
+
+    # 角度仍然是主要门控项，但不再让速度项把总奖励直接压成接近 0。
+    angle_score = torch.sqrt(base_angle_term * tip_angle_term)
+    vel_score = 0.5 * (base_vel_term + tip_vel_term)
+    return angle_score * (0.25 + 0.75 * vel_score)
+
+
 def rk_near_upright_velocity_l2(
     env: ManagerBasedRLEnv,
     asset_cfg: SceneEntityCfg,
@@ -625,4 +693,3 @@ def rk_joint_angle_timeout_reward(
     avg_reward = torch.nan_to_num(avg_reward, nan=0.0, posinf=0.0, neginf=0.0)
 
     return torch.where(time_outs, avg_reward, torch.zeros_like(avg_reward))
-
