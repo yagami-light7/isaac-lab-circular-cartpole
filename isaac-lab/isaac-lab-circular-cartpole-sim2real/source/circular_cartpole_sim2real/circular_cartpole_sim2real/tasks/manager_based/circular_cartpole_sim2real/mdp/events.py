@@ -251,6 +251,73 @@ def reset_joints_velocity_by_offset(
     )
 
 
+def rk_reset_joints_by_stage(
+    env: ManagerBasedEnv,
+    env_ids: torch.Tensor,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    stage1_position_range: tuple[float, float] = (-0.35, 0.35),
+    stage1_velocity_range: tuple[float, float] = (-1.0, 1.0),
+    stage2_position_range: tuple[float, float] = (-1.2, 1.2),
+    stage2_velocity_range: tuple[float, float] = (-3.0, 3.0),
+    stage3_position_range: tuple[float, float] = (-3.0, 3.0),
+    stage3_velocity_range: tuple[float, float] = (-6.0, 6.0),
+    stage1_end_iters: int = 1500,
+    stage2_end_iters: int = 3500,
+    steps_per_env_per_iter: int = 32,
+):
+    """按训练阶段切换 reset 分布。
+
+    这版 curriculum 的重点不是继续只调 reward 权重，而是直接控制
+    初始状态的难度：
+
+    - Stage 1：先学近直立小动作稳定；
+    - Stage 2：再学从中等偏离状态恢复；
+    - Stage 3：最后再放开到全范围 swing-up。
+    """
+
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    if asset_cfg.joint_ids != slice(None):
+        iter_env_ids = env_ids[:, None]
+    else:
+        iter_env_ids = env_ids
+
+    current_step = int(env.common_step_counter)
+    stage1_end_steps = int(stage1_end_iters) * int(steps_per_env_per_iter)
+    stage2_end_steps = int(stage2_end_iters) * int(steps_per_env_per_iter)
+
+    if current_step < stage1_end_steps:
+        position_range = stage1_position_range
+        velocity_range = stage1_velocity_range
+    elif current_step < stage2_end_steps:
+        position_range = stage2_position_range
+        velocity_range = stage2_velocity_range
+    else:
+        position_range = stage3_position_range
+        velocity_range = stage3_velocity_range
+
+    # 每次 reset 都从默认关节位姿出发，再叠加本阶段采样到的偏移量。
+    joint_pos = asset.data.default_joint_pos[iter_env_ids, asset_cfg.joint_ids].clone()
+    joint_vel = asset.data.default_joint_vel[iter_env_ids, asset_cfg.joint_ids].clone()
+
+    joint_pos += math_utils.sample_uniform(
+        *position_range, joint_pos.shape, joint_pos.device
+    )
+    joint_vel += math_utils.sample_uniform(
+        *velocity_range, joint_vel.shape, joint_vel.device
+    )
+
+    # 写入前仍然尊重关节软限位和速度限值，避免 curriculum 本身制造非法状态。
+    joint_pos_limits = asset.data.soft_joint_pos_limits[iter_env_ids, asset_cfg.joint_ids]
+    joint_vel_limits = asset.data.soft_joint_vel_limits[iter_env_ids, asset_cfg.joint_ids]
+    joint_pos = joint_pos.clamp_(joint_pos_limits[..., 0], joint_pos_limits[..., 1])
+    joint_vel = joint_vel.clamp_(-joint_vel_limits, joint_vel_limits)
+
+    asset.write_joint_state_to_sim(
+        joint_pos, joint_vel, joint_ids=asset_cfg.joint_ids, env_ids=env_ids
+    )
+
+
 def _validate_scale_range(
     params: tuple[float, float] | None,
     name: str,
