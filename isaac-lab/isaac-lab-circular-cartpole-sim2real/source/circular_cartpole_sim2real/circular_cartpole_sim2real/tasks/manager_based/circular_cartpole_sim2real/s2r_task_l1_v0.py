@@ -217,7 +217,7 @@ class RewardsCfg:
 
     fixed_alignment = RewTerm(
         func=mdp.rk_joint_angle_alignment_reward,
-        weight=1.56,
+        weight=2.0,
         params={
             "target_angle": fixed_pole_target,
             "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed", "fixed_to_flex_1"]),
@@ -229,7 +229,7 @@ class RewardsCfg:
 
     flex_alignment = RewTerm(
         func=mdp.rk_joint_angle_alignment_reward,
-        weight=2.46,
+        weight=2.5,
         params={
             "target_angle": flex_1_pole_target,
             "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed", "fixed_to_flex_1"]),
@@ -320,7 +320,7 @@ class CurriculumCfg:
         func=mdp.modify_reward_weight_relative,
         params={
             "term_name": "flex_alignment",
-            "weight": 2.62,
+            "weight": 2.5,
             "num_iters": 800,
             "steps_per_env_per_iter": 32,
         },
@@ -330,7 +330,7 @@ class CurriculumCfg:
         func=mdp.modify_reward_weight_relative,
         params={
             "term_name": "fixed_alignment",
-            "weight": 1.42,
+            "weight": 2.5,
             "num_iters": 800,
             "steps_per_env_per_iter": 32,
         },

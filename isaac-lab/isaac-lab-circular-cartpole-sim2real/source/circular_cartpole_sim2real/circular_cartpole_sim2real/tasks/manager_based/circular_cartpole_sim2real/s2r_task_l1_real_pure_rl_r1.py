@@ -156,13 +156,13 @@ class EventCfg:
             # "stage2_velocity_range": (-3.0, 3.0),
 
             "stage1_position_range": (-3.0, 3.0),
-            "stage1_velocity_range": (-3.0, 3.0),
+            "stage1_velocity_range": (-2.0, 2.0),
 
             "stage2_position_range": (-3.0, 3.0),
-            "stage2_velocity_range": (-4.0, 4.0),
+            "stage2_velocity_range": (-3.0, 3.0),
 
             "stage3_position_range": (-3.0, 3.0),
-            "stage3_velocity_range": (-5.0, 5.0),
+            "stage3_velocity_range": (-4.0, 4.0),
 
             "stage1_end_iters": 1000,
             "stage2_end_iters": 3000,
@@ -176,13 +176,13 @@ class EventCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=["fixed_to_flex_1"]),
             "stage1_position_range": (-3.0, 3.0),
-            "stage1_velocity_range": (-3.0, 3.0),
+            "stage1_velocity_range": (-2.0, 2.0),
 
             "stage2_position_range": (-3.0, 3.0),
-            "stage2_velocity_range": (-4.0, 4.0),
-
+            "stage2_velocity_range": (-3.0, 3.0),
+    
             "stage3_position_range": (-3.0, 3.0),
-            "stage3_velocity_range": (-5.0, 5.0),
+            "stage3_velocity_range": (-4.0, 4.0),
             
             "stage1_end_iters": 1000,
             "stage2_end_iters": 3000,
@@ -256,33 +256,34 @@ class RewardsCfg:
     # 固定杆角度对齐奖励
     fixed_alignment = RewTerm(
         func=mdp.rk_joint_angle_alignment_reward,
-        weight=0.80,
+        weight=1.0,
         params={
             "target_angle": fixed_pole_target,
             "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed", "fixed_to_flex_1"]),
             "joint_index": 0,
-            "linear_weight": 4.5,
-            "exp_weight": 0.5,
+            "linear_weight": 1.0,
+            "exp_weight": 4.0,
         },
     )
 
+    
     # 活动杆角度对齐奖励
     flex_alignment = RewTerm(
         func=mdp.rk_joint_angle_alignment_reward,
-        weight=5.20,
+        weight=3.0,
         params={
             "target_angle": flex_1_pole_target,
             "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed", "fixed_to_flex_1"]),
             "joint_index": 1,
-            "linear_weight": 4.5,
-            "exp_weight": 0.5,
+            "linear_weight": 1.0,
+            "exp_weight": 4.0,
         },
     )
 
     # 近直立稳住奖励
     upright_hold = RewTerm(
         func=mdp.rk_upright_hold_soft_reward,
-        weight=50,
+        weight=10.0,
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
             "fixed_pole_joint": "base_to_fixed",
@@ -299,7 +300,7 @@ class RewardsCfg:
     # 近直立时的速度惩罚，鼓励稳住而不是大幅度来回摆动。
     near_upright_velocity = RewTerm(
         func=mdp.rk_near_upright_velocity_l2,
-        weight=-0.0050,
+        weight=-0.01,
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
             "fixed_pole_joint": "base_to_fixed",
@@ -312,7 +313,7 @@ class RewardsCfg:
     # episode 末尾的对齐奖励，鼓励最终结果而非单步导向。
     timeout_alignment = RewTerm(
         func=mdp.rk_joint_angle_timeout_reward,
-        weight=50.0,
+        weight=5.0,
         params={
             "target_angle": flex_1_pole_target,
             "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed", "fixed_to_flex_1"]),
@@ -324,40 +325,40 @@ class RewardsCfg:
     # episode 末尾的速度惩罚，鼓励最终结果而非单步导向。
     timeout_vel_reward = RewTerm(
         func=mdp.rk_timeout_vel_reward,
-        weight=-0.015,
+        weight=-0.005,
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed", "fixed_to_flex_1"]),
         },
     )
 
-    # 惩罚固定杆速度
-    fixed_joint_vel_l2 = RewTerm(
-        func=mdp.joint_vel_l2,
-        weight=-0.005,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed"])},
-    )
+    # # 惩罚固定杆速度
+    # fixed_joint_vel_l2 = RewTerm(
+    #     func=mdp.joint_vel_l2,
+    #     weight=-0.005,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=["base_to_fixed"])},
+    # )
 
-    # 惩罚活动杆速度
-    flex_1_joint_vel_l2 = RewTerm(
-        func=mdp.joint_vel_l2,
-        weight=-0.005,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["fixed_to_flex_1"])},
-    )
+    # # 惩罚活动杆速度
+    # flex_1_joint_vel_l2 = RewTerm(
+    #     func=mdp.joint_vel_l2,
+    #     weight=-0.005,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=["fixed_to_flex_1"])},
+    # )
 
-    # 惩罚电机动作幅度
-    action_magnitude = RewTerm(
-        func=mdp.rk_action_l2,
-        weight=-0.005,
-        params={
-            "flex_target": flex_1_pole_target,
-            "fixed_target": fixed_pole_target,
-            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "fixed_pole_joint": "base_to_fixed",
-            "flex_pole_joint": "fixed_to_flex_1",
-            "high_weight": 1.0,
-            "low_weight": 0.25,
-        },
-    )
+    # # 惩罚电机动作幅度
+    # action_magnitude = RewTerm(
+    #     func=mdp.rk_action_l2,
+    #     weight=-0.0015,
+    #     params={
+    #         "flex_target": flex_1_pole_target,
+    #         "fixed_target": fixed_pole_target,
+    #         "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+    #         "fixed_pole_joint": "base_to_fixed",
+    #         "flex_pole_joint": "fixed_to_flex_1",
+    #         "high_weight": 1.0,
+    #         "low_weight": 0.25,
+    #     },
+    # )
 
 
 @configclass
@@ -369,22 +370,22 @@ class CurriculumCfg:
     “稳住 + 小动作 + 不依赖终点奖励”。
     """
 
-    stronger_action_smoothness_stage = CurrTerm(
-        func=mdp.modify_reward_weight_relative,
-        params={
-            "term_name": "action_magnitude",
-            "weight": -0.015,
-            "num_iters": 3000,
-            "steps_per_env_per_iter": 32,
-        },
-    )
+    # stronger_action_smoothness_stage = CurrTerm(
+    #     func=mdp.modify_reward_weight_relative,
+    #     params={
+    #         "term_name": "action_magnitude",
+    #         "weight": -0.02,
+    #         "num_iters": 400,
+    #         "steps_per_env_per_iter": 32,
+    #     },
+    # )
 
     stronger_hold_reward_stage = CurrTerm(
         func=mdp.modify_reward_weight_relative,
         params={
             "term_name": "upright_hold",
-            "weight": 10.00,
-            "num_iters": 3000,
+            "weight": 15.0,
+            "num_iters": 400,
             "steps_per_env_per_iter": 32,
         },
     )
@@ -394,8 +395,8 @@ class CurriculumCfg:
         func=mdp.modify_reward_weight_relative,
         params={
             "term_name": "near_upright_velocity",
-            "weight": -0.030,
-            "num_iters": 3000,
+            "weight": -0.05,
+            "num_iters": 400,
             "steps_per_env_per_iter": 32,
         },
     )

@@ -16,9 +16,9 @@ from isaaclab_rl.rsl_rl import (
 class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
     """REAL-PURE-RL-R1 的 PPO 配置。
 
-    这版不急着改网络结构，先把动作分布收紧：
-    - clip_actions 从 100 降到 5，避免学出巨大的 raw action
-    - init_noise_std 从 0.9 降到 0.5，减小早期探索抖动
+    这版用于 checkpoint 续训微调：
+    - 保持网络结构不变，避免引入额外分布偏移
+    - 适度降低学习率和熵系数，优先提升近直立稳态而非继续大幅探索
     """
 
     num_steps_per_env = 32
@@ -38,10 +38,10 @@ class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
-        entropy_coef=0.003,
+        entropy_coef=0.001,
         num_learning_epochs=5,
         num_mini_batches=8,
-        learning_rate=1.5e-4,
+        learning_rate=7e-5,
         schedule="fixed",
         gamma=0.995,
         lam=0.95,
